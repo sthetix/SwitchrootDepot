@@ -1,0 +1,62 @@
+{
+    "linux_distros": [
+        {
+            "name": "ubuntu-bionic",
+            "url": "https://download.switchroot.org/ubuntu-bionic/"
+        },
+        {
+            "name": "ubuntu-jammy",
+            "url": "https://download.switchroot.org/ubuntu-jammy/"
+        },
+        {
+            "name": "ubuntu-noble",
+            "url": "https://download.switchroot.org/ubuntu-noble/"
+        },
+        {
+            "name": "fedora-39",
+            "url": "https://download.switchroot.org/fedora-39/"
+        },
+        {
+            "name": "fedora-41",
+            "url": "https://download.switchroot.org/fedora-41/"
+        },
+        {
+            "name": "Lakka",
+            "url": "https://download.switchroot.org/lakka/"
+        }
+    ],
+    "android_devices": {
+        "nx_tab": "Android (Tablet)",
+        "nx": "Android (TV)"
+    },
+    "android_required_files": [
+        {
+            "name": "bootlogo_android.bmp",
+            "url": "https://wiki.lineageos.org/images/device_specific/nx/bootlogo_android.bmp",
+            "path": "switchroot/android/bootlogo_android.bmp"
+        },
+        {
+            "name": "icon_android_hue.bmp",
+            "url": "https://wiki.lineageos.org/images/device_specific/nx/icon_android_hue.bmp",
+            "path": "switchroot/android/icon_android_hue.bmp"
+        }
+    ],
+    "android_ini_template": "[LineageOS]\nl4t=1\nboot_prefixes=switchroot/android/\nid=SWANDR\nicon=switchroot/android/icon_android_hue.bmp\nlogopath=switchroot/android/bootlogo_android.bmp\nr2p_action=self\n; alarms_disable=1 uncomment to disable notifications for better battery life\n; touch_skip_tuning=1 uncomment if your touchscreen is broken\n; usb3_enable=1 uncomment for faster USB at expense of WiFi/BT quality\n; ddr200_enable=1 uncomment for faster SD speed on models that support it (Samsung enabled by default)\n; emmc=1 uncomment to boot from the internal eMMC (not reccomended, and requires a signifigantly different set of installation instructions/partitioning process)\n",
+    "api_urls": {
+        "android_api": "https://download.lineageos.org/api/v2/devices/{}/builds",
+        "gapps_org": "https://api.github.com/orgs/MindTheGapps/repos?per_page=100"
+    },
+    "version_map": {
+        "18.1": "11",
+        "19.1": "12",
+        "20.0": "13",
+        "21.0": "14",
+        "22.0": "15",
+        "22.1": "15",
+        "22.2": "15",
+        "23.0": "16"
+    },
+    "file_patterns": {
+        "download_file_pattern": "href=\"([^\"]+\\.(?:7z|zip|tar))\""
+    }
+}
