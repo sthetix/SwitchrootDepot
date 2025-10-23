@@ -38,7 +38,7 @@ If you prefer to run the script directly, you can do so using Python. This metho
 
 1.  **Clone the repository:**
     ```bash
-    git clone [https://github.com/sthetix/SwitchrootDepot.git](https://github.com/sthetix/SwitchrootDepot.git)
+    git clone https://github.com/sthetix/SwitchrootDepot.git
     cd switchroot-depot
     ```
 
