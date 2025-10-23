@@ -38,7 +38,7 @@ If you prefer to run the script directly, you can do so using Python. This metho
 
 1.  **Clone the repository:**
     ```bash
-    git clone [https://github.com/your-username/switchroot-depot.git](https://github.com/your-username/switchroot-depot.git)
+    git clone [https://github.com/sthetix/SwitchrootDepot.git](https://github.com/sthetix/SwitchrootDepot.git)
     cd switchroot-depot
     ```
 
@@ -71,23 +71,6 @@ The application relies on several JSON files located in its root directory:
 * `settings.json`: This file stores your personal settings, such as your GitHub PAT (to avoid rate limits) and download preferences.
 * `last_scan.json`: This is a cache file used to store the results of the last server scan. Deleting it will force a full refresh on the next launch.
 
-## Building the Executable (Optional)
-
-If you want to build the `SwitchrootDepot.exe` file yourself, you can use PyInstaller.
-
-1.  Install PyInstaller in your venv:
-    ```bash
-    pip install pyinstaller
-    ```
-
-2.  Run the PyInstaller build command. You must include the `components.json` file.
-    ```bash
-    # --onefile: Create a single .exe
-    # --windowed: Hide the console window
-    # --add-data: Bundle the essential components.json
-    
-    pyinstaller --onefile --windowed --add-data="components.json;." SwitchrootDepot.py
-    ```
 
 ## License
 
