@@ -161,6 +161,27 @@ class SwitchrootDownloader:
         self.download_lock = threading.Lock()  # Thread-safe counter
         self.session = requests.Session()  # Reusable session for connection pooling
 
+        # Configure session for better reliability
+        adapter = requests.adapters.HTTPAdapter(
+            max_retries=requests.adapters.Retry(
+                total=3,
+                backoff_factor=1,
+                status_forcelist=[429, 500, 502, 503, 504]
+            ),
+            pool_connections=10,
+            pool_maxsize=20
+        )
+        self.session.mount('http://', adapter)
+        self.session.mount('https://', adapter)
+
+        # Set reasonable headers to mimic browser behavior
+        self.session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'application/json, text/plain, */*',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Connection': 'keep-alive'
+        })
+
         self.create_widgets()
         self.log_message("Welcome to the Switchroot Depot!")
         self.log_message(f"Default download directory: {self.download_dir}")
@@ -647,9 +668,31 @@ class SwitchrootDownloader:
             try:
                 url = self.ANDROID_API_URL.format(device_id)
                 self.log_message(f"Checking {device_name} API: {url}")
-                response = session.get(url, timeout=10)
-                response.raise_for_status()
-                builds = response.json()
+
+                # Retry logic with increased timeout (connect, read)
+                max_retries = 3
+                retry_delay = 2
+                for attempt in range(max_retries):
+                    try:
+                        # Separate connect and read timeouts: (connect_timeout, read_timeout)
+                        response = session.get(url, timeout=(10, 60))
+                        response.raise_for_status()
+                        builds = response.json()
+                        break
+                    except requests.Timeout as e:
+                        if attempt < max_retries - 1:
+                            self.log_message(f"Timeout on attempt {attempt + 1}/{max_retries} ({e}), retrying in {retry_delay}s...")
+                            time.sleep(retry_delay)
+                            retry_delay *= 2  # Exponential backoff
+                        else:
+                            raise
+                    except requests.RequestException as e:
+                        if attempt < max_retries - 1:
+                            self.log_message(f"Network error on attempt {attempt + 1}/{max_retries}: {e}, retrying...")
+                            time.sleep(retry_delay)
+                            retry_delay *= 2
+                        else:
+                            raise
 
                 if not builds:
                     self.log_message(f"No builds found for {device_name}.")
