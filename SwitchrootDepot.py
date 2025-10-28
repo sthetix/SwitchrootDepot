@@ -1166,8 +1166,14 @@ class SwitchrootDownloader:
 
         try:
             # First, get the file size and check if server supports range requests
-            head_response = self.session.head(url, timeout=10, allow_redirects=True)
+            # IMPORTANT: Follow redirects and get the final URL for range requests
+            # Override Accept header for binary files (mirrorbits doesn't like application/json)
+            head_headers = {'Accept': '*/*'}
+            head_response = self.session.head(url, headers=head_headers, timeout=10, allow_redirects=True)
             head_response.raise_for_status()
+
+            # Get the final URL after redirects (important for mirrorbits)
+            final_url = head_response.url
 
             total_size = int(head_response.headers.get('Content-Length', 0))
             accept_ranges = head_response.headers.get('Accept-Ranges', 'none')
@@ -1202,13 +1208,13 @@ class SwitchrootDownloader:
                 # Progress tracking for all segments
                 progress_dict = {i: 0 for i in range(self.download_connections)}
 
-                # Download all segments in parallel
+                # Download all segments in parallel using the final redirected URL
                 with ThreadPoolExecutor(max_workers=self.download_connections) as executor:
                     futures = []
                     for start, end, segment_num, temp_file in segments:
                         future = executor.submit(
                             self.download_segment,
-                            url, start, end, segment_num, temp_file,
+                            final_url, start, end, segment_num, temp_file,
                             progress_dict, filename
                         )
                         futures.append(future)
@@ -1244,7 +1250,8 @@ class SwitchrootDownloader:
                 if not use_multiconnection and total_size > 5 * 1024 * 1024:
                     self.log_message(f"Server doesn't support range requests, using single connection for {filename}")
 
-                response = self.session.get(url, stream=True, timeout=30, allow_redirects=True)
+                # Use the final URL after redirects for consistency
+                response = self.session.get(final_url, stream=True, timeout=30, allow_redirects=True)
                 response.raise_for_status()
 
                 if total_size == 0:
