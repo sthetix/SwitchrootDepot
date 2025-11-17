@@ -257,7 +257,7 @@ class SwitchrootDownloader:
         self.total_progress_label.pack(fill="x")
 
         # --- Log Frame (from NX_Wifi_Region_Changer) ---
-        log_frame = ttk.LabelFrame(self.master, text="Log Output", padding=10)
+        log_frame = ttk.Labelframe(self.master, text="Log Output", padding=10)
         log_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
 
         self.log_widget = scrolledtext.ScrolledText(log_frame, wrap="word", height=10, state="disabled",
@@ -330,7 +330,7 @@ class SwitchrootDownloader:
         settings_window.grab_set()
 
         # GitHub PAT Frame
-        pat_frame = ttk.LabelFrame(settings_window, text="GitHub Personal Access Token (PAT)", padding=20)
+        pat_frame = ttk.Labelframe(settings_window, text="GitHub Personal Access Token (PAT)", padding=20)
         pat_frame.pack(fill="both", expand=True, padx=20, pady=20)
 
         info_label = ttk.Label(pat_frame, text="Enter your GitHub PAT to avoid API rate limits.\n"
@@ -386,7 +386,7 @@ class SwitchrootDownloader:
                   wraplength=500).pack(pady=(0, 20))
 
         # Parallel connections setting
-        connections_frame = ttk.LabelFrame(info_frame, text="Parallel Connections Per File", padding=15)
+        connections_frame = ttk.Labelframe(info_frame, text="Parallel Connections Per File", padding=15)
         connections_frame.pack(fill="x", pady=(0, 15))
 
         ttk.Label(connections_frame, text="More connections = faster downloads (like Internet Download Manager).\n"
@@ -416,7 +416,7 @@ class SwitchrootDownloader:
         current_conn_label.pack(pady=(5, 20))
 
         # Chunk size setting
-        chunk_frame = ttk.LabelFrame(info_frame, text="Download Chunk Size", padding=15)
+        chunk_frame = ttk.Labelframe(info_frame, text="Download Chunk Size", padding=15)
         chunk_frame.pack(fill="x", pady=(0, 15))
 
         ttk.Label(chunk_frame, text="Larger chunks = faster downloads but less frequent progress updates.\n"
