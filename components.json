@@ -1,34 +1,4 @@
 {
-    "linux_distros": [
-        {
-            "name": "ubuntu-bionic",
-            "url": "https://download.switchroot.org/ubuntu-bionic/"
-        },
-        {
-            "name": "ubuntu-jammy",
-            "url": "https://download.switchroot.org/ubuntu-jammy/"
-        },
-        {
-            "name": "ubuntu-noble",
-            "url": "https://download.switchroot.org/ubuntu-noble/"
-        },
-        {
-            "name": "fedora-39",
-            "url": "https://download.switchroot.org/fedora-39/"
-        },
-        {
-            "name": "fedora-41",
-            "url": "https://download.switchroot.org/fedora-41/"
-        },
-        {
-            "name": "Lakka",
-            "url": "https://download.switchroot.org/lakka/"
-        }
-    ],
-    "android_devices": {
-        "nx_tab": "Android (Tablet)",
-        "nx": "Android (TV)"
-    },
     "android_required_files": [
         {
             "name": "bootlogo_android.bmp",

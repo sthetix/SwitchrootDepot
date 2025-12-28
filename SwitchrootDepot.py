@@ -104,7 +104,7 @@ def load_components():
 
         # Validate required keys
         required_keys = [
-            'linux_distros', 'android_devices', 'android_required_files',
+            'android_required_files',
             'android_ini_template', 'api_urls', 'version_map', 'file_patterns'
         ]
 
@@ -131,8 +131,10 @@ class SwitchrootDownloader:
         # --- Load Components from JSON ---
         try:
             components = load_components()
-            self.LINUX_DISTROS = components['linux_distros']
-            self.ANDROID_DEVICES = components['android_devices']
+            self.SWITCHROOT_BASE_URL = "https://download.switchroot.org/"
+            self.LINEAGEOS_API_BASE = "https://download.lineageos.org/api/v2/devices"
+            # Known Switchroot device codenames to check for builds
+            self.SWITCHROOT_DEVICE_CODENAMES = ["nx", "nx_tab"]
             self.ANDROID_REQUIRED_FILES = components['android_required_files']
             self.ANDROID_INI_TEMPLATE = components['android_ini_template']
             self.ANDROID_API_URL = components['api_urls']['android_api']
@@ -603,34 +605,77 @@ class SwitchrootDownloader:
 
         return None
 
+    def discover_linux_distros(self):
+        """Auto-discovers Linux distros from the Switchroot download server"""
+        self.log_message("Discovering available Linux distros...")
+        distros = []
+
+        try:
+            response = self.session.get(self.SWITCHROOT_BASE_URL, timeout=10)
+            response.raise_for_status()
+
+            # Pattern to match directory links (e.g., href="fedora-42/")
+            dir_pattern = re.compile(r'href="([^"]+)/"')
+            directories = dir_pattern.findall(response.text)
+
+            # Filter to only Linux-related directories (exclude android-*, parent dir, etc.)
+            linux_keywords = ['ubuntu', 'fedora', 'lakka', 'arch', 'debian', 'manjaro', 'opensuse']
+
+            for dir_name in directories:
+                # Skip parent directory and android directories
+                if dir_name == '..' or dir_name.startswith('android'):
+                    continue
+
+                # Check if it matches known Linux distro patterns
+                dir_lower = dir_name.lower()
+                if any(keyword in dir_lower for keyword in linux_keywords):
+                    distros.append({
+                        "name": dir_name,
+                        "url": f"{self.SWITCHROOT_BASE_URL}{dir_name}/"
+                    })
+                    self.log_message(f"Discovered distro: {dir_name}")
+
+            self.log_message(f"Found {len(distros)} Linux distros")
+
+        except Exception as e:
+            self.log_message(f"Warning: Could not auto-discover distros: {e}")
+
+        return distros
+
     def scan_linux_builds(self):
-        """Scans Linux builds from various sources"""
+        """Scans Linux builds from auto-discovered sources"""
         self.log_message("Scanning for Linux builds...")
-        session = requests.Session()
-        
-        for distro in self.LINUX_DISTROS:
+
+        # Auto-discover distros from the server
+        linux_distros = self.discover_linux_distros()
+
+        if not linux_distros:
+            self.log_message("No Linux distros discovered.")
+            return
+
+        # Get the domain root
+        parsed_url = urlparse(self.SWITCHROOT_BASE_URL)
+        domain_root = f"{parsed_url.scheme}://{parsed_url.netloc}"
+
+        for distro in linux_distros:
             name = distro["name"]
             url = distro["url"]
-            
-            # Get the domain root (e.g., "https://download.switchroot.org")
-            parsed_url = urlparse(url)
-            domain_root = f"{parsed_url.scheme}://{parsed_url.netloc}"
-            
+
             try:
                 self.log_message(f"Checking {name} at {url} ...")
-                response = session.get(url, timeout=10)
+                response = self.session.get(url, timeout=10)
                 response.raise_for_status()
-                
+
                 files = self.DOWNLOAD_FILE_PATTERN.findall(response.text)
-                
+
                 if not files:
                     self.log_message(f"No files found for {name} (pattern: .7z, .zip, .tar)")
                     continue
 
                 for file in files:
                     file_name = file.split('/')[-1]
-                    file_url = "" 
-                    
+                    file_url = ""
+
                     # --- URL FIX LOGIC ---
                     if file.startswith('http'):
                         file_url = file
@@ -639,32 +684,73 @@ class SwitchrootDownloader:
                     else:
                         file_url = f"{url}{file}"
                     # --- END OF FIX ---
-                    
+
                     # Send HEAD request to get file size
                     try:
-                        head_resp = session.head(file_url, timeout=5, allow_redirects=True)
+                        head_resp = self.session.head(file_url, timeout=5, allow_redirects=True)
                         size_bytes = int(head_resp.headers.get('Content-Length', 0))
                         size_str = self.format_size(size_bytes)
                     except Exception as e:
                         self.log_message(f"Warning: Could not get size for {file_name}. URL: {file_url}. Error: {e}")
                         size_bytes = 0
-                        size_str = "0 B" 
-                    
+                        size_str = "0 B"
+
                     item_data = ("Linux", name, file_name, size_str, file_url, size_bytes)
                     self.master.after(0, self.add_tree_item, item_data)
-                    
+
             except Exception as e:
                 self.log_message(f"Warning: Failed to scan {name}: {e}")
+
+    def discover_android_devices(self):
+        """Auto-discovers available Switchroot Android devices from LineageOS API"""
+        self.log_message("Discovering available Android devices...")
+        devices = {}
+
+        for codename in self.SWITCHROOT_DEVICE_CODENAMES:
+            try:
+                # Check if this device has builds available
+                url = f"{self.LINEAGEOS_API_BASE}/{codename}/builds"
+                self.log_message(f"Checking for {codename} builds at LineageOS API...")
+
+                response = self.session.get(url, timeout=(10, 30))
+
+                if response.status_code == 200:
+                    builds = response.json()
+                    if builds:
+                        # Determine display name based on codename
+                        if codename == "nx":
+                            display_name = "Android (TV)"
+                        elif codename == "nx_tab":
+                            display_name = "Android (Tablet)"
+                        else:
+                            display_name = f"Android ({codename})"
+
+                        devices[codename] = display_name
+                        self.log_message(f"Discovered Android device: {codename} -> {display_name} ({len(builds)} builds)")
+                else:
+                    self.log_message(f"No builds found for {codename} (HTTP {response.status_code})")
+
+            except Exception as e:
+                self.log_message(f"Warning: Could not check {codename}: {e}")
+
+        self.log_message(f"Found {len(devices)} Android devices")
+        return devices
 
     def scan_android_builds(self):
         """Scans ALL Android builds and compatible GApps, combining them into unified entries"""
         self.log_message("Scanning LineageOS API for Android...")
-        session = requests.Session()
+
+        # Auto-discover available devices
+        android_devices = self.discover_android_devices()
+
+        if not android_devices:
+            self.log_message("No Android devices discovered.")
+            return
 
         # Use version map from components.json
         version_map = self.VERSION_MAP
 
-        for device_id, device_name in self.ANDROID_DEVICES.items():
+        for device_id, device_name in android_devices.items():
             try:
                 url = self.ANDROID_API_URL.format(device_id)
                 self.log_message(f"Checking {device_name} API: {url}")
@@ -675,7 +761,7 @@ class SwitchrootDownloader:
                 for attempt in range(max_retries):
                     try:
                         # Separate connect and read timeouts: (connect_timeout, read_timeout)
-                        response = session.get(url, timeout=(10, 60))
+                        response = self.session.get(url, timeout=(10, 60))
                         response.raise_for_status()
                         builds = response.json()
                         break
@@ -759,7 +845,7 @@ class SwitchrootDownloader:
                                 gapps_api_url = f"https://api.github.com/repos/MindTheGapps/{repo_name}/releases/latest"
                                 self.log_message(f"Found matching GApps repo: {repo_name}")
 
-                                gapps_response = session.get(gapps_api_url, timeout=10, headers=self.get_github_headers())
+                                gapps_response = self.session.get(gapps_api_url, timeout=10, headers=self.get_github_headers())
                                 gapps_response.raise_for_status()
 
                                 gapps_data = gapps_response.json()
