@@ -121,7 +121,7 @@ def load_components():
 # --- Main Application Class ---
 
 class SwitchrootDownloader:
-    VERSION = "1.0.1"
+    VERSION = "1.0.2"
 
     def __init__(self, master):
         self.master = master
@@ -539,8 +539,9 @@ class SwitchrootDownloader:
             self.scan_linux_builds()
             self.scan_android_builds()
 
-            # Save scan results to cache
-            self.save_scan_cache()
+            # Queue cache saving after all pending tree insertions. Tk widgets must
+            # only be read from the UI thread.
+            self.master.after(0, self.save_scan_cache)
 
             self.log_message("Server scan complete.")
             self.master.after(0, self.download_button.config, {"state": "normal"})
@@ -1026,6 +1027,21 @@ class SwitchrootDownloader:
             messagebox.showerror("Invalid Directory", f"Download directory is invalid:\n{self.download_dir}")
             return
 
+        selected_android_devices = set()
+        for item_id in selected_items:
+            values = self.tree.item(item_id, "values")
+            tags = self.tree.item(item_id, "tags")
+            if values[0] == "Android" and len(tags) >= 6:
+                device_type = tags[4]
+                if device_type in selected_android_devices:
+                    messagebox.showwarning(
+                        "Multiple Android Builds",
+                        f"Please select only one Android build for {device_type}. "
+                        "Multiple builds use the same destination files and cannot be downloaded together."
+                    )
+                    return
+                selected_android_devices.add(device_type)
+
         self.log_message(f"Preparing to download {len(selected_items)} file(s)...")
         self.set_ui_state("disabled")
 
@@ -1170,20 +1186,31 @@ class SwitchrootDownloader:
                 if dist_type in ["Android", "Android-Build", "Android-Extras"] and device_type:
                     android_device_types.add(device_type)
 
+        failed_tasks = 0
+        failed_device_types = set()
         with ThreadPoolExecutor(max_workers=4) as executor:
-            futures = [executor.submit(self.download_file_worker, *task) for task in tasks]
+            future_tasks = {
+                executor.submit(self.download_file_worker, *task): task
+                for task in tasks
+            }
 
-            for future in futures:
+            for future, task in future_tasks.items():
                 try:
                     future.result() # Wait for each download to finish
                 except Exception as e:
+                    failed_tasks += 1
+                    if len(task) >= 6 and task[5]:
+                        failed_device_types.add(task[5])
                     self.log_message(f"Error during download: {e}")
 
         # Create android.ini files for each Android device type
-        for device_type in android_device_types:
+        for device_type in android_device_types - failed_device_types:
             self.create_android_ini(device_type)
 
-        self.log_message("All download tasks complete.")
+        if failed_tasks:
+            self.log_message(f"Download finished with {failed_tasks} failed task(s).")
+        else:
+            self.log_message("All download tasks complete.")
         self.master.after(0, self.reset_ui_after_download)
 
     def download_segment(self, url, start, end, segment_num, temp_file, progress_dict, filename):
@@ -1380,6 +1407,7 @@ class SwitchrootDownloader:
                     os.remove(f"{filepath}.part{i}")
                 except OSError:
                     pass
+            raise
         except Exception as e:
             self.log_message(f"FATAL ERROR on {filename}: {e}")
             # Clean up any temp segment files
@@ -1388,6 +1416,7 @@ class SwitchrootDownloader:
                     os.remove(f"{filepath}.part{i}")
                 except OSError:
                     pass
+            raise
 
     def update_progress(self, filename, completed_count, total_files, downloaded_size, total_size):
         """Thread-safe method to update all progress indicators"""
