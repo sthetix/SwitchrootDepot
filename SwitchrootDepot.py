@@ -13,7 +13,7 @@ import re
 import time
 import json
 from concurrent.futures import ThreadPoolExecutor
-from urllib.parse import urlparse # Import for URL logic
+from urllib.parse import urljoin, urlparse # Import for URL logic
 
 # --- Resource & DPI Scaling (from NX_Wifi_Region_Changer) ---
 
@@ -622,6 +622,7 @@ class SwitchrootDownloader:
             linux_keywords = ['ubuntu', 'fedora', 'lakka', 'arch', 'debian', 'manjaro', 'opensuse']
 
             for dir_name in directories:
+                dir_name = dir_name.strip("/")
                 # Skip parent directory and android directories
                 if dir_name == '..' or dir_name.startswith('android'):
                     continue
@@ -631,7 +632,7 @@ class SwitchrootDownloader:
                 if any(keyword in dir_lower for keyword in linux_keywords):
                     distros.append({
                         "name": dir_name,
-                        "url": f"{self.SWITCHROOT_BASE_URL}{dir_name}/"
+                        "url": urljoin(response.url, f"{dir_name}/")
                     })
                     self.log_message(f"Discovered distro: {dir_name}")
 
