@@ -121,7 +121,7 @@ def load_components():
 # --- Main Application Class ---
 
 class SwitchrootDownloader:
-    VERSION = "1.0.3"
+    VERSION = "1.0.1"
 
     def __init__(self, master):
         self.master = master
