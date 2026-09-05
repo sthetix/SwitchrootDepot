@@ -121,7 +121,7 @@ def load_components():
 # --- Main Application Class ---
 
 class SwitchrootDownloader:
-    VERSION = "1.0.2"
+    VERSION = "1.0.3"
 
     def __init__(self, master):
         self.master = master
@@ -221,6 +221,16 @@ class SwitchrootDownloader:
                                           command=self.start_download_thread, bootstyle="success", state="disabled", width=20)
         self.download_button.pack(side="left", padx=5)
 
+        download_path_frame = ttk.Frame(self.master, padding=(15, 0, 15, 5))
+        download_path_frame.pack(fill="x")
+        self.download_path_label = ttk.Label(
+            download_path_frame,
+            text=f"Download folder: {self.download_dir}",
+            bootstyle="info",
+            anchor="w"
+        )
+        self.download_path_label.pack(fill="x")
+
         # --- Treeview for Builds ---
         tree_frame = ttk.Frame(self.master, padding=10)
         tree_frame.pack(fill="both", expand=True, padx=10, pady=5)
@@ -295,6 +305,7 @@ class SwitchrootDownloader:
         new_dir = filedialog.askdirectory(initialdir=self.download_dir)
         if new_dir:
             self.download_dir = new_dir
+            self.download_path_label.config(text=f"Download folder: {self.download_dir}")
             self.log_message(f"Download directory set to: {self.download_dir}")
 
     def center_window(self, window):
